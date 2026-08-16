@@ -22,9 +22,39 @@ os.environ["GEMINI_API_KEY"] = clean_key
 client = genai.Client(api_key=clean_key)
 llm = LLM(model="gemini/gemini-3.5-flash", api_key=clean_key)
 
+from pathlib import Path
+
 # --- LOAD THE XACTIMATE PDFS ---
-# Put all your chunked PDFs into a folder named "xactimate_pdfs" right next to app.py
-xactimate_tool = PDFSearchTool(pdf="xactimate_pdfs")
+APP_DIR = Path(__file__).resolve().parent
+XACTIMATE_DIR = APP_DIR / "xactimate_pdfs"
+
+
+@st.cache_resource(show_spinner="Indexing Xactimate reference PDFs...")
+def load_xactimate_tools():
+    if not XACTIMATE_DIR.is_dir():
+        raise FileNotFoundError(
+            f"Missing PDF directory: {XACTIMATE_DIR}. "
+            "Add the xactimate_pdfs folder to the deployed repository."
+        )
+
+    pdf_files = sorted(XACTIMATE_DIR.glob("*.pdf"))
+
+    if not pdf_files:
+        raise FileNotFoundError(
+            f"No PDF files were found in: {XACTIMATE_DIR}"
+        )
+
+    return [
+        PDFSearchTool(pdf=str(pdf_file))
+        for pdf_file in pdf_files
+    ]
+
+
+try:
+    xactimate_tools = load_xactimate_tools()
+except Exception as e:
+    st.error(f"Could not load the Xactimate reference PDFs: {e}")
+    st.stop()
 
 # --- INITIALIZE THE ENTIRE CREW ---
 gilligan = Agent(
@@ -138,7 +168,7 @@ professor = Agent(
     goal="Generate Xactimate line items using exact CAT codes and descriptions from the provided PDF reference files.",
     backstory=f"Expert property loss estimator. You MUST use your PDF search tool to find the correct Xactimate CAT and SEL codes. NEVER guess or make up a code. If it is not in your search results, leave the SEL blank or state you can't find it. ALWAYS reference this master index to ensure you are using the correct 3-letter CAT code for the trade:\n\n{XACTIMATE_MASTER_INDEX}",
     llm=llm,
-    tools=[xactimate_tool],
+    tools=xactimate_tools,
     allow_delegation=False,
     verbose=False
 )
