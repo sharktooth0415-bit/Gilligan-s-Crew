@@ -1,7 +1,6 @@
 import os
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 from PIL import Image
 import io
 from crewai import Agent, Task, Crew, Process, LLM
@@ -16,9 +15,10 @@ if not api_key:
     st.info("Enter your Gemini API key in the sidebar to get started.")
     st.stop()
 
-# Initialize Gemini Client and CrewAI LLM with gemini-1.5-flash
-client = genai.Client(api_key=api_key.strip())
-llm = LLM(model="gemini/gemini-1.5-flash", api_key=api_key.strip())
+# Configure GenAI and CrewAI LLM
+clean_key = api_key.strip()
+genai.configure(api_key=clean_key)
+llm = LLM(model="gemini/gemini-1.5-flash-latest", api_key=clean_key)
 
 st.subheader("1. Upload Documents & Field Photos")
 uploaded_pdf = st.file_uploader("Upload EagleView Report (PDF)", type=["pdf"])
@@ -37,40 +37,29 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
 
     with st.spinner("Processing documents & images via Gemini Vision..."):
         try:
-            vision_parts = [
-                types.Part.from_text(
-                    text=(
-                        "Analyze these attached property claims photos, handwritten/printed scope notes, and EagleView reports. "
-                        "Extract: 1) Roof pitch, squares, facets, ridges, hips, valleys, eaves, rakes. "
-                        "2) Directional slope damage hit counts / test squares. "
-                        "3) Exterior elevation collateral damage (gutters, siding, screens, soft metals). "
-                        "4) Any building code mandates noted."
-                    )
-                )
-            ]
+            model = genai.GenerativeModel("gemini-1.5-flash-latest")
+            prompt = (
+                "Analyze these attached property claims photos, handwritten/printed scope notes, and EagleView reports. "
+                "Extract: 1) Roof pitch, squares, facets, ridges, hips, valleys, eaves, rakes. "
+                "2) Directional slope damage hit counts / test squares. "
+                "3) Exterior elevation collateral damage (gutters, siding, screens, soft metals). "
+                "4) Any building code mandates noted."
+            )
 
-            # Handle PDF uploads
+            content_list = [prompt]
+
             if uploaded_pdf:
                 pdf_bytes = uploaded_pdf.read()
-                vision_parts.append(
-                    types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
-                )
+                content_list.append({"mime_type": "application/pdf", "data": pdf_bytes})
 
-            # Handle Image uploads
             if uploaded_images:
                 for img_file in uploaded_images:
                     img = Image.open(img_file).convert("RGB")
                     buf = io.BytesIO()
                     img.save(buf, format="JPEG")
-                    vision_parts.append(
-                        types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg")
-                    )
+                    content_list.append({"mime_type": "image/jpeg", "data": buf.getvalue()})
 
-            # Extract data using gemini-1.5-flash
-            extraction_response = client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=vision_parts
-            )
+            extraction_response = model.generate_content(content_list)
             extracted_data = extraction_response.text
             st.success("✅ Data extracted from documents successfully!")
 
@@ -112,7 +101,7 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
             )
 
             t2 = Task(
-                description=f"Review extracted field facts and identify required IRC/IBC provisions (drip edge perimeter, ice barrier SF, valley metal, step flashing, chimney crickets).",
+                description="Review extracted field facts and identify required IRC/IBC provisions (drip edge perimeter, ice barrier SF, valley metal, step flashing, chimney crickets).",
                 expected_output="Code compliance breakdown citing IRC sections.",
                 agent=ginger
             )
