@@ -23,9 +23,40 @@ os.environ["GEMINI_API_KEY"] = clean_key
 client = genai.Client(api_key=clean_key)
 llm = LLM(model="gemini/gemini-3.5-flash", api_key=clean_key)
 
-st.subheader("1. Upload Documents & Field Photos")
+# --- THE PROFESSOR AGENT (Updated for Clarification) ---
+professor = Agent(
+    role="Certified Xactimate Estimator (The Professor)",
+    goal="Generate Xactimate line items OR explicitly ask clarifying questions if details are missing or ambiguous.",
+    backstory="Expert property loss estimator. You never guess, assume, or hallucinate Selector (SEL) codes or dimensions. If a scope sheet is missing measurements, lacks context, or is ambiguous, you stop the estimation process and output a numbered list of the exact questions you need the user to answer before you can proceed.",
+    llm=llm,
+    verbose=False
+)
 
-# Unified uploader for PDFs and all photo types
+# --- NEW BYPASS SECTION ---
+st.subheader("1. Ask The Professor Directly (Bypass Full Scope)")
+direct_question = st.text_area("Have a quick Xactimate line item question? Ask here:")
+if st.button("Ask The Professor 🧠"):
+    if not direct_question:
+        st.warning("Please enter a question first.")
+    else:
+        with st.spinner("The Professor is digging through his memory..."):
+            try:
+                t_direct = Task(
+                    description=f"Answer the following Xactimate estimating question: {direct_question}. Provide the exact CAT code and line item description. Only provide the SEL code if you are absolutely sure, otherwise leave it blank.",
+                    expected_output="Direct answer containing the requested Xactimate line items or advice.",
+                    agent=professor
+                )
+                direct_crew = Crew(agents=[professor], tasks=[t_direct])
+                result = direct_crew.kickoff()
+                st.info("📋 **The Professor's Answer:**")
+                st.markdown(result.raw)
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+st.divider()
+
+# --- ORIGINAL FULL CREW SECTION ---
+st.subheader("2. Full Multi-Agent Scoping")
 uploaded_files = st.file_uploader(
     "Upload EagleView (PDF or Photo) & Scope Sheets / Damage Notes",
     type=["pdf", "jpg", "jpeg", "png", "webp", "heic"],
@@ -34,7 +65,7 @@ uploaded_files = st.file_uploader(
 
 cause_of_loss = st.selectbox("Cause of Loss", ["Hail", "Wind", "Water"])
 
-if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
+if st.button("Analyze Photos & Run Full Crew 🚀", type="primary"):
     if not uploaded_files:
         st.warning("Please upload at least one photo, scope sheet, or EagleView document.")
         st.stop()
@@ -51,7 +82,6 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
             
             vision_parts = [types.Part.from_text(text=prompt_text)]
 
-            # Automatically sort out PDFs vs Images
             for file in uploaded_files:
                 if file.name.lower().endswith(".pdf"):
                     pdf_bytes = file.read()
@@ -66,7 +96,6 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
                         types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg")
                     )
 
-            # Direct generation targeting the active Gemini 3.5 Flash model
             response = client.models.generate_content(
                 model="gemini-3.5-flash",
                 contents=vision_parts
@@ -78,7 +107,6 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
             st.error(f"Error reading documents/photos: {e}")
             st.stop()
 
-    # Run CrewAI Pipeline
     with st.spinner("Crew is calculating thresholds, checking IRC code, and scoping Xactimate line items..."):
         try:
             gilligan = Agent(
@@ -97,14 +125,6 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
                 verbose=False
             )
 
-            professor = Agent(
-                role="Certified Xactimate Estimator (The Professor)",
-                goal="Generate a line-by-line itemized Xactimate schedule with CAT/SEL codes, quantities, and F9 notes",
-                backstory="Expert property loss estimator providing comprehensive line items without skipping ancillary scope.",
-                llm=llm,
-                verbose=False
-            )
-
             t1 = Task(
                 description=f"Analyze extracted inspection facts for {cause_of_loss} claim: {extracted_data}. Apply the rule: 6+ hits per test square replaces the slope; 50%+ slopes replaced triggers full roof replacement.",
                 expected_output="Adjuster Narrative Report detailing slope breakdown and replacement determination.",
@@ -118,7 +138,7 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
             )
 
             t3 = Task(
-                description="Using Gilligan's narrative and Ginger's code report, produce a complete itemized Xactimate schedule with Category, Selector, Action, Description, Qty, Unit, and F9 justification notes.",
+                description="Using Gilligan's narrative and Ginger's code report, produce a complete itemized Xactimate schedule. Provide the exact CAT code and description. Leave the SEL code blank unless you are 100% certain.",
                 expected_output="Markdown table with full Xactimate line items.",
                 agent=professor
             )
