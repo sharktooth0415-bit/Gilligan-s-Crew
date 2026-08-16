@@ -16,9 +16,9 @@ if not api_key:
     st.info("Enter your Gemini API key in the sidebar to get started.")
     st.stop()
 
-# Initialize Gemini Client and CrewAI LLM
+# Initialize Gemini Client and CrewAI LLM with active Gemini 2.5 Flash model
 client = genai.Client(api_key=api_key.strip())
-llm = LLM(model="gemini/gemini-2.0-flash", api_key=api_key.strip())
+llm = LLM(model="gemini/gemini-2.5-flash", api_key=api_key.strip())
 
 st.subheader("1. Upload Documents & Field Photos")
 uploaded_pdf = st.file_uploader("Upload EagleView Report (PDF)", type=["pdf"])
@@ -66,9 +66,9 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
                         types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg")
                     )
 
-            # Extract data using Gemini 2.0 Flash
+            # Extract data using active gemini-2.5-flash model
             extraction_response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-2.5-flash",
                 contents=vision_parts
             )
             extracted_data = extraction_response.text
