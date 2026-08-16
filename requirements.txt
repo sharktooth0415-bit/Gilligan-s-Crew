@@ -2,3 +2,4 @@ crewai
 streamlit
 google-genai
 pillow
+crewai-tools
