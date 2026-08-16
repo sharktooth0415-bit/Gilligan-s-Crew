@@ -131,8 +131,14 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
 
             crew_output = claim_crew.kickoff()
 
-            st.subheader("📋 Final Multi-Agent Scope & Narrative")
-            st.markdown(crew_output.raw)
+            st.subheader("🧢 Gilligan's Inspection Narrative")
+            st.markdown(t1.output.raw)
+
+            st.subheader("👠 Ginger's Code Compliance Report")
+            st.markdown(t2.output.raw)
+
+            st.subheader("📋 The Professor's Xactimate Schedule")
+            st.markdown(t3.output.raw)
 
         except Exception as e:
             st.error(f"Error during CrewAI execution: {e}")
