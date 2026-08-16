@@ -24,7 +24,7 @@ llm = LLM(model="gemini/gemini-3.5-flash", api_key=clean_key)
 
 # --- LOAD THE XACTIMATE PDFS ---
 # Put all your chunked PDFs into a folder named "xactimate_pdfs" right next to app.py
-xactimate_tool = PDFSearchTool(directory="xactimate_pdfs")
+xactimate_tool = PDFSearchTool(pdf="xactimate_pdfs")
 
 # --- INITIALIZE THE ENTIRE CREW ---
 gilligan = Agent(
