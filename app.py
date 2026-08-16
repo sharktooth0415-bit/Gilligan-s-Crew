@@ -19,9 +19,9 @@ if not api_key:
 clean_key = api_key.strip()
 os.environ["GEMINI_API_KEY"] = clean_key
 
-# Initialize modern GenAI client with standard 1.5 flash model
+# Initialize modern GenAI client with explicit -002 version
 client = genai.Client(api_key=clean_key)
-llm = LLM(model="gemini/gemini-1.5-flash", api_key=clean_key)
+llm = LLM(model="gemini/gemini-1.5-flash-002", api_key=clean_key)
 
 st.subheader("1. Upload Documents & Field Photos")
 uploaded_pdf = st.file_uploader("Upload EagleView Report (PDF)", type=["pdf"])
@@ -65,9 +65,9 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
                         types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg")
                     )
 
-            # Direct generation with new SDK targeting 1.5-flash
+            # Direct generation targeting the explicit stable model
             response = client.models.generate_content(
-                model="gemini-1.5-flash",
+                model="gemini-1.5-flash-002",
                 contents=vision_parts
             )
             extracted_data = response.text
@@ -96,7 +96,7 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
                 verbose=False
             )
 
-            estimator = Agent(
+            professor = Agent(
                 role="Certified Xactimate Estimator",
                 goal="Generate a line-by-line itemized Xactimate schedule with CAT/SEL codes, quantities, and F9 notes",
                 backstory="Expert property loss estimator providing comprehensive line items without skipping ancillary scope.",
@@ -123,7 +123,7 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
             )
 
             claim_crew = Crew(
-                agents=[gilligan, ginger, estimator],
+                agents=[gilligan, ginger, professor],
                 tasks=[t1, t2, t3],
                 process=Process.sequential
             )
