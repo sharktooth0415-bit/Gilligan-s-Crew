@@ -1,5 +1,5 @@
-crewai
 streamlit
 google-genai
+crewai[tools]
 pillow
-crewai-tools
+pillow-heif
