@@ -19,9 +19,9 @@ if not api_key:
 clean_key = api_key.strip()
 os.environ["GEMINI_API_KEY"] = clean_key
 
-# Initialize modern GenAI client with explicit -002 version
+# Initialize modern GenAI client with current 3.5 flash model
 client = genai.Client(api_key=clean_key)
-llm = LLM(model="gemini/gemini-1.5-flash-002", api_key=clean_key)
+llm = LLM(model="gemini/gemini-3.5-flash", api_key=clean_key)
 
 st.subheader("1. Upload Documents & Field Photos")
 uploaded_pdf = st.file_uploader("Upload EagleView Report (PDF)", type=["pdf"])
@@ -65,9 +65,9 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
                         types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg")
                     )
 
-            # Direct generation targeting the explicit stable model
+            # Direct generation targeting the active Gemini 3.5 Flash model
             response = client.models.generate_content(
-                model="gemini-1.5-flash-002",
+                model="gemini-3.5-flash",
                 contents=vision_parts
             )
             extracted_data = response.text
@@ -96,8 +96,9 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
                 verbose=False
             )
 
+            # Updated Estimator Agent
             professor = Agent(
-                role="Certified Xactimate Estimator",
+                role="Certified Xactimate Estimator (The Professor)",
                 goal="Generate a line-by-line itemized Xactimate schedule with CAT/SEL codes, quantities, and F9 notes",
                 backstory="Expert property loss estimator providing comprehensive line items without skipping ancillary scope.",
                 llm=llm,
@@ -119,11 +120,11 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
             t3 = Task(
                 description="Using Gilligan's narrative and Ginger's code report, produce a complete itemized Xactimate schedule with Category, Selector, Action, Description, Qty, Unit, and F9 justification notes.",
                 expected_output="Markdown table with full Xactimate line items.",
-                agent=estimator
+                agent=professor # Assigned to the Professor
             )
 
             claim_crew = Crew(
-                agents=[gilligan, ginger, professor],
+                agents=[gilligan, ginger, professor], # Added Professor to the crew
                 tasks=[t1, t2, t3],
                 process=Process.sequential
             )
