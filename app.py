@@ -24,18 +24,19 @@ client = genai.Client(api_key=clean_key)
 llm = LLM(model="gemini/gemini-3.5-flash", api_key=clean_key)
 
 st.subheader("1. Upload Documents & Field Photos")
-uploaded_pdf = st.file_uploader("Upload EagleView Report (PDF)", type=["pdf"])
-uploaded_images = st.file_uploader(
-    "Take Photos or Upload Scope Sheets / Damage Notes",
-    type=["jpg", "jpeg", "png", "webp", "heic"],
+
+# Unified uploader for PDFs and all photo types
+uploaded_files = st.file_uploader(
+    "Upload EagleView (PDF or Photo) & Scope Sheets / Damage Notes",
+    type=["pdf", "jpg", "jpeg", "png", "webp", "heic"],
     accept_multiple_files=True
 )
 
 cause_of_loss = st.selectbox("Cause of Loss", ["Hail", "Wind", "Water"])
 
 if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
-    if not uploaded_images and not uploaded_pdf:
-        st.warning("Please upload at least one photo, scope sheet, or EagleView PDF.")
+    if not uploaded_files:
+        st.warning("Please upload at least one photo, scope sheet, or EagleView document.")
         st.stop()
 
     with st.spinner("Processing documents & images via Gemini Vision..."):
@@ -50,15 +51,15 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
             
             vision_parts = [types.Part.from_text(text=prompt_text)]
 
-            if uploaded_pdf:
-                pdf_bytes = uploaded_pdf.read()
-                vision_parts.append(
-                    types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
-                )
-
-            if uploaded_images:
-                for img_file in uploaded_images:
-                    img = Image.open(img_file).convert("RGB")
+            # Automatically sort out PDFs vs Images
+            for file in uploaded_files:
+                if file.name.lower().endswith(".pdf"):
+                    pdf_bytes = file.read()
+                    vision_parts.append(
+                        types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
+                    )
+                else:
+                    img = Image.open(file).convert("RGB")
                     buf = io.BytesIO()
                     img.save(buf, format="JPEG")
                     vision_parts.append(
@@ -96,7 +97,6 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
                 verbose=False
             )
 
-            # Updated Estimator Agent
             professor = Agent(
                 role="Certified Xactimate Estimator (The Professor)",
                 goal="Generate a line-by-line itemized Xactimate schedule with CAT/SEL codes, quantities, and F9 notes",
@@ -120,11 +120,11 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
             t3 = Task(
                 description="Using Gilligan's narrative and Ginger's code report, produce a complete itemized Xactimate schedule with Category, Selector, Action, Description, Qty, Unit, and F9 justification notes.",
                 expected_output="Markdown table with full Xactimate line items.",
-                agent=professor # Assigned to the Professor
+                agent=professor
             )
 
             claim_crew = Crew(
-                agents=[gilligan, ginger, professor], # Added Professor to the crew
+                agents=[gilligan, ginger, professor],
                 tasks=[t1, t2, t3],
                 process=Process.sequential
             )
