@@ -9,7 +9,7 @@ from crewai import Agent, Task, Crew, Process, LLM
 st.set_page_config(page_title="Claims Multi-Agent App", page_icon="📸", layout="centered")
 st.title("📸 Field Claims Scoping Crew")
 
-# Retrieve API Key (Supports AQ... and AIza... keys)
+# Retrieve API Key 
 api_key = os.environ.get("GEMINI_API_KEY") or st.sidebar.text_input("Gemini API Key", type="password")
 
 if not api_key:
@@ -19,9 +19,9 @@ if not api_key:
 clean_key = api_key.strip()
 os.environ["GEMINI_API_KEY"] = clean_key
 
-# Initialize modern GenAI client
+# Initialize modern GenAI client with standard 1.5 flash model
 client = genai.Client(api_key=clean_key)
-llm = LLM(model="gemini/gemini-2.0-flash", api_key=clean_key)
+llm = LLM(model="gemini/gemini-1.5-flash", api_key=clean_key)
 
 st.subheader("1. Upload Documents & Field Photos")
 uploaded_pdf = st.file_uploader("Upload EagleView Report (PDF)", type=["pdf"])
@@ -65,9 +65,9 @@ if st.button("Analyze Photos & Run Crew 🚀", type="primary"):
                         types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg")
                     )
 
-            # Direct generation with new SDK and AQ key support
+            # Direct generation with new SDK targeting 1.5-flash
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-1.5-flash",
                 contents=vision_parts
             )
             extracted_data = response.text
