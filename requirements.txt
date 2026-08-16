@@ -1,5 +1,6 @@
 streamlit
 google-genai
+google-generativeai
 crewai[tools]
 pillow
 pillow-heif
