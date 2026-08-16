@@ -77,17 +77,14 @@ XACTIMATE_DIR = APP_DIR / "xactimate_pdfs"
 
 def make_pdf_config(api_key_value: str) -> dict:
     """
-    Configure PDFSearchTool to use Gemini embeddings instead of
-    its default OpenAI embedding provider.
+    Use a local sentence-transformer for PDF indexing.
+    This avoids Gemini embedding API calls and quota usage.
     """
     return {
         "embedding_model": {
-            "provider": "google-generativeai",
+            "provider": "sentence-transformer",
             "config": {
-                "model_name": "gemini-embedding-001",
-                "api_key": api_key_value,
-                "task_type": "RETRIEVAL_DOCUMENT",
-                "title": "Xactimate Reference",
+                "model": "all-MiniLM-L6-v2",
             },
         },
         "vectordb": {
