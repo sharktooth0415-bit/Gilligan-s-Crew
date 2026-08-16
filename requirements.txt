@@ -1,4 +1,4 @@
 crewai
 streamlit
-google-genai
+google-generativeai
 pillow
